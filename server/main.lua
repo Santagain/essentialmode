@@ -2,78 +2,6 @@
 --  GNU AFFERO GENERAL PUBLIC LICENSE  --
 --     Version 3, 19 November 2007     --
 
-_VERSION = '6.3.0'
-_FirstCheckPerformed = false
-_UUID = LoadResourceFile(GetCurrentResourceName(), "uuid") or "unknown"
-_Prefix = '^2[EssentialMode]^0'
-_PrefixError = '^1[EssentialMode]^0'
-
--- Server
-
--- Version check
-local VersionAPIRequest = "https://api.kanersps.pw/em/version?version=" .. _VERSION .. "&uuid=" .. _UUID
-
-function performVersionCheck()
-	print("Performing version check against: " .. VersionAPIRequest .. "\n")
-	PerformHttpRequest(VersionAPIRequest, function(err, rText, headers)
-		local decoded = json.decode(rText)
-
-		if err == 200 then
-			if(not _FirstCheckPerformed)then
-				print("\n" .. _Prefix .. " Current version: " .. _VERSION)
-				print(_Prefix .. " Updater version: " .. decoded.newVersion .. "\n")
-
-				if(decoded.startupmessage)then
-					print(decoded.startupmessage)
-				end
-			end
-			
-			if(decoded.uuid)then
-				SaveResourceFile(GetCurrentResourceName(), "uuid", decoded.uuid, -1)
-
-				_UUID = decoded.uuid
-				if(not _FirstCheckPerformed)then
-					ExecuteCommand("sets EssentialModeUUID " .. _UUID)
-					ExecuteCommand("sets EssentialModeVersion " .. _VERSION)
-					_FirstCheckPerformed = true
-				end
-			end
-
-			if not decoded.updated then
-				print("\n" .. _Prefix .. " Current version: " .. _VERSION)
-				print(_Prefix .. " Updater version: " .. decoded.newVersion .. "\n")
-
-				print(_Prefix .. " Changelog: \n" .. decoded.changes .. "\n")
-				print(_Prefix .. " You're not running the newest stable version of EssentialMode please update:\n" .. decoded.updateLocation)
-				log('Version mismatch was detected, updater version: ' .. rText .. '(' .. _VERSION .. ')')
-			else
-				print(_Prefix .. " Everything is nice and updated!\n")
-			end
-
-			if decoded.extra then
-				print(decoded.extra)
-			end
-		else
-			print(_Prefix .. " Updater version: UPDATER UNAVAILABLE")
-			print(_Prefix .. " This could be your internet connection or that the update server is not running. This won't impact the server\n\n")
-		
-			if(not _FirstCheckPerformed)then
-				ExecuteCommand("sets EssentialModeUUID " .. _UUID)
-				ExecuteCommand("sets EssentialModeVersion " .. _VERSION)
-				_FirstCheckPerformed = true
-			end
-		end
-	end, "GET", "", {what = 'this'})
-end
-
--- Perform version check periodically while server is running. To notify of updates.
-Citizen.CreateThread(function()
-	while true do
-		performVersionCheck()
-		Citizen.Wait(3600000)
-	end
-end)
-
 AddEventHandler('playerDropped', function()
 	local Source = source
 
@@ -98,7 +26,7 @@ AddEventHandler('playerConnecting', function(name, setKickReason)
 	end
 
 	if not id then
-		setKickReason("Unable to find SteamID, please relaunch FiveM with steam open or restart FiveM & Steam if steam is already open")
+		setKickReason("Não foi possível encontrar seu SteamID, reinicie o FiveM com a Steam aberta ou reinicie o FiveM & Steam se a Steam já estiver aberta")
 		CancelEvent()
 	end
 end)
@@ -116,7 +44,7 @@ AddEventHandler('es:firstJoinProper', function()
 		end
 
 		if not id then
-			DropPlayer(Source, "SteamID not found, please try reconnecting with Steam open.")
+			DropPlayer(Source, "SteamID não encontrado, tente reconectar com a Steam aberta.")
 		else
 			registerUser(id, Source)
 			justJoined[Source] = true
@@ -363,30 +291,3 @@ AddEventHandler('es:updatePositions', function(x, y, z)
 		Users[source].setCoords(x, y, z)
 	end
 end)
-
--- Info command
-commands['info'] = {}
-commands['info'].perm = 0
-commands['info'].arguments = -1
-commands['info'].cmd = function(source, args, user)
-	local Source = source
-	TriggerClientEvent('chatMessage', Source, 'SYSTEM', {255, 0, 0}, "^2[^3EssentialMode^2]^0 Version: ^2 " .. _VERSION)
-	TriggerClientEvent('chatMessage', Source, 'SYSTEM', {255, 0, 0}, "^2[^3EssentialMode^2]^0 Commands loaded: ^2 " .. (returnIndexesInTable(commands) - 2))
-end
-
--- Dev command, no need to ever use this.
-commands["devinfo"] = {}
-commands["devinfo"].perm = math.maxinteger
-commands['devinfo'].arguments = -1
-commands["devinfo"].group = "_dev"
-commands["devinfo"].cmd = function(source, args, user)
-	local Source = source
-	local db = "CouchDB"
-	if GetConvar('es_enableCustomData', 'false') == "1" then db = "Custom" end
-	TriggerClientEvent('chatMessage', Source, 'SYSTEM', {255, 0, 0}, "^2[^3EssentialMode^2]^0 Version: ^2 " .. _VERSION)
-	TriggerClientEvent('chatMessage', Source, 'SYSTEM', {255, 0, 0}, "^2[^3EssentialMode^2]^0 Groups: ^2 " .. (returnIndexesInTable(groups) - 1))
-	TriggerClientEvent('chatMessage', Source, 'SYSTEM', {255, 0, 0}, "^2[^3EssentialMode^2]^0 Commands loaded: ^2 " .. (returnIndexesInTable(commands) - 1))
-	TriggerClientEvent('chatMessage', Source, 'SYSTEM', {255, 0, 0}, "^2[^3EssentialMode^2]^0 Database: ^2 " .. db)
-	TriggerClientEvent('chatMessage', Source, 'SYSTEM', {255, 0, 0}, "^2[^3EssentialMode^2]^0 Logging enabled: ^2 " .. tostring(settings.defaultSettings.enableLogging))
-end
-commands["devinfo"].callbackfailed = function(source, args, user)end

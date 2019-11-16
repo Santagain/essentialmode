@@ -16,7 +16,7 @@ server_scripts {
 	'server/classes/player.lua',
 	'server/classes/groups.lua',
 	'server/player/login.lua',
-	'server/metrics.lua'
+--	'server/metrics.lua'
 }
 
 client_scripts {
